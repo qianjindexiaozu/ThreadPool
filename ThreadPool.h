@@ -1,5 +1,7 @@
+#pragma once
 #include <thread>
 #include <vector>
+#include <queue>
 #include <atomic>
 #include <functional>
 #include <mutex>
@@ -25,7 +27,12 @@ using namespace std;
 
 class ThreadPool {
 public:
-    
+    ThreadPool(int min = 2, int max = thread::hardware_concurrency());
+    ~ThreadPool();
+private:
+    void addTask(function<void(void)> task);
+    void manager();
+    void worker();
 private:
     thread* m_manager;
     vector<thread> m_workers;
@@ -36,6 +43,6 @@ private:
     atomic<bool> m_stop;
     queue<function<void(void)>> m_tasks;
     mutex m_queueMutex;
-    condition_variable m_condition_variable;
+    condition_variable m_condition;
 
 };
