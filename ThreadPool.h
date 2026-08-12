@@ -1,5 +1,6 @@
 #pragma once
 #include <thread>
+#include <map>
 #include <vector>
 #include <queue>
 #include <atomic>
@@ -29,15 +30,18 @@ class ThreadPool {
 public:
     ThreadPool(int min = 2, int max = thread::hardware_concurrency());
     ~ThreadPool();
-private:
     void addTask(function<void(void)> task);
+private:
     void manager();
     void worker();
 private:
     thread* m_manager;
-    vector<thread> m_workers;
+    map<thread::id, thread> m_workers;
+    vector<thread::id> m_ids;
+    mutex m_idsMutex;
     atomic<int> m_curThreads;
     atomic<int> m_idleThreads;
+    atomic<int> m_exitThreads;
     atomic<int> m_maxThreads;
     atomic<int> m_minThreads;
     atomic<bool> m_stop;
