@@ -2,4 +2,4 @@
 .vscode/
 .codex/
 .DS_Store/
-outputs/
+build/

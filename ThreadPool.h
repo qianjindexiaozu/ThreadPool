@@ -1,6 +1,9 @@
-#pragma once
+#include <future>
+#include <memory>
 #include <thread>
 #include <map>
+#include <type_traits>
+#include <utility>
 #include <vector>
 #include <queue>
 #include <atomic>
@@ -31,6 +34,29 @@ public:
     ThreadPool(int min = 2, int max = thread::hardware_concurrency());
     ~ThreadPool();
     void addTask(function<void(void)> task);
+    template<typename F, typename... Args> 
+    auto addTask(F&& f, Args&&... args) -> future<typename result_of<F(Args...)>::type> { 
+        using resultType = typename result_of<F(Args...)>::type; 
+
+        // 1. 将 函数和参数绑定的可调用对象 包装成任务对象，并交由智能共享指针管理
+        auto mytask = make_shared<packaged_task<resultType()>> (
+            bind(std::forward<F>(f), std::forward<Args>(args)...)
+        );
+
+        // 2. 得到future
+        future<resultType> res = mytask->get_future();
+
+        // 3. 将任务加入任务队列
+        m_queueMutex.lock();
+        m_tasks.emplace([mytask] () {
+            (*mytask)();
+        });
+        m_queueMutex.unlock();
+
+        m_condition.notify_one();
+
+        return res;
+    }
 private:
     void manager();
     void worker();

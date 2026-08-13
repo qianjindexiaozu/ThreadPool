@@ -1,24 +1,24 @@
 #include "ThreadPool.h"
 #include <chrono>
-#include <cstdio>
 #include <functional>
 #include <mutex>
 #include <thread>
 #include <iostream>
+#include <vector>
 
 ThreadPool::ThreadPool(int min, int max) : m_minThreads(min), m_maxThreads(max), 
-    m_curThreads(max), m_idleThreads(max), m_stop(false) {
+    m_curThreads(min), m_idleThreads(min), m_stop(false) {
     // 管理者线程
     m_manager = new thread(&ThreadPool::manager, this);
 
     // 工作线程
-    for (int i = 0; i < max; i++) {
+    for (int i = 0; i < min; i++) {
         thread t(&ThreadPool::worker, this);
         m_workers.insert(make_pair(t.get_id(), std::move(t)));
     }
     cout << "ThreadPool创建完成" << endl;
-    cout << "minThreads: " << m_minThreads << endl;
-    cout << "maxThreads: " << m_maxThreads << endl;
+    cout << "minThreads: " << m_minThreads.load() << endl;
+    cout << "maxThreads: " << m_maxThreads.load() << endl;
 }
 
 ThreadPool::~ThreadPool() {
@@ -120,13 +120,16 @@ int calc_int(int x, int y) {
 
 int main() {
 
-    ThreadPool tp;
+    ThreadPool pool;
+    vector<future<int>> results;
 
     for (int i = 0; i < 10; i++) {
-        auto obj = bind(calc, i, i * 2);
-        tp.addTask(obj);
+        results.emplace_back(pool.addTask(calc_int, i, i * 2));
     }
 
-    getchar();
+    for (auto& res : results) {
+        cout << "执行结果：" << res.get() << endl;
+    }
+
     return 0;
 }
