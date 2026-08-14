@@ -53,6 +53,10 @@ public:
         });
         m_queueMutex.unlock();
 
+        if (m_idleThreads.load() == 0) {
+            m_manager_condition.notify_one();
+        }
+
         m_condition.notify_one();
 
         return res;
@@ -62,6 +66,7 @@ private:
     void worker();
 private:
     thread* m_manager;
+    condition_variable m_manager_condition;
     map<thread::id, thread> m_workers;
     vector<thread::id> m_ids;
     mutex m_idsMutex;
